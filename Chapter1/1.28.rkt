@@ -1,7 +1,7 @@
 #lang scheme
 
 ; 单次Miller-Rabin检查：(miller-test n)
-; 按照概率，完整的检测至少要检查n/2次，可以使用fast-prime完成一次完整检测
+; 按照概率，完整的检测至少要检查n/2次，可以使用fast-miller-prime完成一次完整检测
 
 (define (expmod base exp m)
   (cond ((= exp 0) 1)
@@ -26,8 +26,10 @@
     (= (expmod a (- n 1) n) 1))
   (try-it (+ 1 (random (- n 1)))))
 
-(define (fast-prime? n)
-  (let ((times (/ n 2)))
-    (cond ((= times 0) true)
+(define (fast-miller-prime? n)
+  (fast-prime? n (/ n 2)))
+
+(define (fast-prime? n times)
+    (cond ((< times 1) true)
         ((miller-test n) (fast-prime? n (- times 1)))
-        (else false))))
+        (else false)))
