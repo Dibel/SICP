@@ -13,8 +13,8 @@
   (lambda (x) (f (g x))))
 
 (define (repeated f n)
-  (if (= n 0)
-      (lambda (x) x)
+  (if (= n 1)
+      f
       (compose f (repeated f (- n 1)))))
 
 ; For test
@@ -23,3 +23,5 @@
 
 ((smooth square) 5)
 ((smooth-n square 5) 5)
+
+((repeated square 2) 5)
