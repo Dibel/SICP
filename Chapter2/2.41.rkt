@@ -41,4 +41,4 @@
       '()
       (cons low (enumerate-interval (+ low 1) high))))
 
-(sum-pairs 10)
+(sum-pairs 20)
