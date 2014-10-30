@@ -7,6 +7,13 @@
         ((sum? exp)
          (make-sum (deriv (addend exp) var)
                    (deriv (augend exp) var)))
+        ((sub? exp)
+         (make-sub (deriv (subbeg exp) var)
+                   (deriv (subend exp) var)))
+        ((divide? exp)
+         (make-divide (make-product
+                       (deriv (divbeg exp) var)
+                       (divend exp))))
         ((exponentiation? exp)
          (make-product
           (make-product (exponent exp) (deriv (base exp) var))
@@ -18,6 +25,19 @@
                         (deriv (multiplicand exp) var))
           (make-product (deriv (multiplier exp) var)
                         (multiplicand exp))))
+        ((sin? exp)
+         (make-product (deriv (sin-num exp) var)
+                       (make-cos (sin-num exp))))
+        ((cos? exp)
+         (make-product (deriv (cos-num exp) var)
+                       (make-sin (cos-num exp))))
+        ((ln? exp)
+         (make-product (deriv (ln-num exp) var)
+                       (make-frac (ln-num exp))))
+        ((log? exp)
+         (make-product (make-devide (deriv (log-base exp) var)
+                                    (make-ln (log-expr exp)))
+                       (make-frac (log-base exp))))
         (else
          (error "unknown expression type -- DERIV" exp))))
 
@@ -33,6 +53,70 @@
          (fast-expt base (- e 1)))
         ((number? e) (list '** base (- e 1)))
         (else (list '** base (list '- e 1)))))
+
+; sin
+(define (sin? x)
+  (and (pair? x) (eq? (car x) 'sin)))
+(define (sin-num exp) (cadr exp))
+(define (make-cos x)
+  (list 'cos x))
+
+;cos
+(define (cos? x)
+  (and (pair? x) (eq? (car x) 'cos)))
+(define (cos-num exp) (cadr exp))
+(define (make-sin x)
+  (list '* '-1 (list 'sin x)))
+
+;ln
+(define (ln? x)
+  (and (pair? x) (eq? (car x) 'ln)))
+(define (ln-num exp) (cadr exp))
+(define (make-frac x)
+  (if (number? x)
+      (/ 1 x)
+      (list '/ 1 x)))
+
+;log
+(define (log? x)
+  (and (pair? x) (eq? (car x) 'log)))
+(define (log-base exp) (caddr exp))
+(define (log-expr exp) (cadr exp))
+(define (make-ln x)
+  (if (number? x)
+      (log x)
+      (list 'ln x)))
+(define (make-devide d1 d2)
+  (cond ((and (number? d1) (number? d2)) (/ d1 d2))
+        (else (list '/ d1 d2))))
+
+; sub
+(define (sub? x)
+  (and (pair? x) (eq? (car x) '-)))
+(define (subbeg exp) (cadr exp))
+(define (subend exp)
+  (if (null? (cdddr exp))
+      (caddr exp)
+      (cons '- (cddr exp))))
+(define (make-sub s1 s2)
+  (cond ((=number? s1 0) (- 0 s2))
+        ((=number? s2 0) s1)
+        ((and (number? s1) (number? s2)) (- s1 s2))
+        (else (list '- s1 s2))))
+
+; divide
+(define (divide? x)
+  (and (pair? x) (eq? (car x) '/)))
+(define (divbeg exp) (cadr exp))
+(define (divend exp)
+  (if (null? (cdddr exp))
+      (caddr exp)
+      (cons '/ (cddr exp))))
+(define (make-divide d1 d2)
+  (cond ((=number? d1 0) 0)
+        ((=number? d2 0) (error "divided by 0"))
+        ((and (number? d1) (number? d2)) (/ d1 d2))
+        (else (list '/ d1 d2))))
 
 (define (variable? x) (symbol? x))
 (define (sum? x)
@@ -56,9 +140,16 @@
   (and (number? a1) (= a1 a2)))
 
 (define (addend exp) (cadr exp))
-(define (augend exp) (caddr exp))
+(define (augend exp)
+  (if (null? (cdddr exp))
+      (caddr exp)
+      (cons '* (cddr exp))))
+
 (define (multiplier exp) (cadr exp))
-(define (multiplicand exp) (caddr exp))
+(define (multiplicand exp) 
+  (if (null? (cdddr exp))
+      (caddr exp)
+      (cons '* (cddr exp))))
 
 (define (fast-expt b n)
   (fastexpt-iter b n 1))
