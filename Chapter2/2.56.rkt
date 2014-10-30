@@ -11,14 +11,19 @@
          (make-sub (deriv (subbeg exp) var)
                    (deriv (subend exp) var)))
         ((divide? exp)
-         (make-divide (make-product
-                       (deriv (divbeg exp) var)
-                       (divend exp))))
+         (make-divide (make-sub 
+                       (make-product
+                        (deriv (divbeg exp) var)
+                        (divend exp))
+                       (make-product
+                        (deriv (divend exp) var)
+                        (divbeg exp)))
+                      (make-exponentiation (divend exp) '2)))
         ((exponentiation? exp)
          (make-product
           (make-product (exponent exp) (deriv (base exp) var))
           (make-exponentiation (base exp)
-                               (exponent exp))))
+                               (make-sub (exponent exp) '1))))
         ((product? exp)
          (make-sum
           (make-product (multiplier exp)
@@ -30,7 +35,7 @@
                        (make-cos (sin-num exp))))
         ((cos? exp)
          (make-product (deriv (cos-num exp) var)
-                       (make-sin (cos-num exp))))
+                       (make-product '-1 (make-sin (cos-num exp)))))
         ((ln? exp)
          (make-product (deriv (ln-num exp) var)
                        (make-frac (ln-num exp))))
@@ -46,13 +51,16 @@
   (and (pair? x) (eq? (car x) '**)))
 (define (base exp) (cadr exp))
 (define (exponent exp) (caddr exp))
-(define (make-exponentiation base e)
-  (cond ((=number? e 1) 1)
-        ((=number? e 2) base)
-        ((and (number? e) (number? base))
-         (fast-expt base (- e 1)))
-        ((number? e) (list '** base (- e 1)))
-        (else (list '** base (list '- e 1)))))
+
+
+(define (make-exponentiation b e)
+  (cond ((=number? e 0) 1)
+        ((=number? e 1) b)
+        ((and (number? e) (number? b))
+         (fast-expt b e))
+        ((exponentiation? b) ; 合并乘方
+         (make-exponentiation (base b) (make-product (exponent b) e)))
+        (else (list '** b e))))
 
 ; sin
 (define (sin? x)
@@ -66,7 +74,7 @@
   (and (pair? x) (eq? (car x) 'cos)))
 (define (cos-num exp) (cadr exp))
 (define (make-sin x)
-  (list '* '-1 (list 'sin x)))
+  (list 'sin x))
 
 ;ln
 (define (ln? x)
@@ -102,6 +110,7 @@
   (cond ((=number? s1 0) (- 0 s2))
         ((=number? s2 0) s1)
         ((and (number? s1) (number? s2)) (- s1 s2))
+        ((same-variable? s1 s2) 0)
         (else (list '- s1 s2))))
 
 ; divide
@@ -116,6 +125,7 @@
   (cond ((=number? d1 0) 0)
         ((=number? d2 0) (error "divided by 0"))
         ((and (number? d1) (number? d2)) (/ d1 d2))
+        ((same-variable? d1 d2) 1)
         (else (list '/ d1 d2))))
 
 (define (variable? x) (symbol? x))
@@ -130,11 +140,22 @@
         ((=number? a2 0) a1)
         ((and (number? a1) (number? a2)) (+ a1 a2))
         (else (list '+ a1 a2))))
+
 (define (make-product m1 m2)
   (cond ((or (=number? m1 0) (=number? m2 0)) 0)
         ((=number? m1 1) m2)
         ((=number? m2 1) m1)
         ((and (number? m1) (number? m2)) (* m1 m2))
+        ((and (product? m1) (number? m2))
+         (cond ((number? (multiplier m1))
+                (make-product (* (multiplier m1) m2) (multiplicand m1)))
+               ((number? (multiplicand m1))
+                (make-product (multiplier m1) (* m2 (multiplicand m1))))))
+        ((and (product? m2) (number? m1))
+         (cond ((number? (multiplier m2))
+                (make-product (* (multiplier m2) m1) (multiplicand m2)))
+               ((number? (multiplicand m2))
+                (make-product (multiplier m2) (* m1 (multiplicand m2))))))
         (else (list '* m1 m2))))
 (define (=number? a1 a2)
   (and (number? a1) (= a1 a2)))
@@ -143,7 +164,7 @@
 (define (augend exp)
   (if (null? (cdddr exp))
       (caddr exp)
-      (cons '* (cddr exp))))
+      (cons '+ (cddr exp))))
 
 (define (multiplier exp) (cadr exp))
 (define (multiplicand exp) 
