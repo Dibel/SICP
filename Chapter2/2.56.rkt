@@ -49,7 +49,9 @@
 ; exponentiation
 (define (exponentiation? x)
   (and (pair? x) (eq? (car x) '**)))
+; 取底
 (define (base exp) (cadr exp))
+; 取幂
 (define (exponent exp) (caddr exp))
 
 
@@ -101,7 +103,9 @@
 ; sub
 (define (sub? x)
   (and (pair? x) (eq? (car x) '-)))
+; 取被减数
 (define (subbeg exp) (cadr exp))
+; 取减数
 (define (subend exp)
   (if (null? (cdddr exp))
       (caddr exp)
@@ -123,9 +127,12 @@
       (cons '/ (cddr exp))))
 (define (make-divide d1 d2)
   (cond ((=number? d1 0) 0)
-        ((=number? d2 0) (error "divided by 0"))
+        ((=number? d2 0) (error "divided by 0")) ; 处理除0错误
         ((and (number? d1) (number? d2)) (/ d1 d2))
-        ((same-variable? d1 d2) 1)
+        ((same-variable? d1 d2) 1) ; 同变量简化
+        ((and (product? d1) (variable? d2))
+         (cond ((same-variable? (multiplier d1) d2) (multiplicand d1))
+               ((same-variable? (multiplicand d1) d2) (multiplier d1))))
         (else (list '/ d1 d2))))
 
 (define (variable? x) (symbol? x))
@@ -146,7 +153,7 @@
         ((=number? m1 1) m2)
         ((=number? m2 1) m1)
         ((and (number? m1) (number? m2)) (* m1 m2))
-        ((and (product? m1) (number? m2))
+        ((and (product? m1) (number? m2)) ; 以下均为简化：若两个乘数中有一个为数字且另一个乘数是一个含有数字的乘式则把这两个数字相乘以得到新的简化式
          (cond ((number? (multiplier m1))
                 (make-product (* (multiplier m1) m2) (multiplicand m1)))
                ((number? (multiplicand m1))
@@ -167,7 +174,7 @@
       (cons '+ (cddr exp))))
 
 (define (multiplier exp) (cadr exp))
-(define (multiplicand exp) 
+(define (multiplicand exp)
   (if (null? (cdddr exp))
       (caddr exp)
       (cons '* (cddr exp))))

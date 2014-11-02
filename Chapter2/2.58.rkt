@@ -22,7 +22,7 @@
         (else
          (error "unknown expression type -- DERIV" exp))))
 
-
+; 用来在表中搜索某一符号，使用了continuation
 (define (linear-search wanted lst)
   (call/cc (lambda (return)
              (for-each (lambda (k)
@@ -33,6 +33,8 @@
              #f)))
 
 (define (variable? x) (symbol? x))
+
+; 如果表中含有加号，就把整个式子看作加式
 (define (sum? x)
   (and (pair? x) (linear-search '+ x)))
 (define (product? x)
@@ -50,7 +52,7 @@
         ((=number? m1 1) m2)
         ((=number? m2 1) m1)
         ((and (number? m1) (number? m2)) (* m1 m2))
-        ((and (product? m1) (number? m2))
+        ((and (product? m1) (number? m2)) ; 以下均为简化:若两个乘数中有一个为数字且另一个乘数是一个含有数字的乘式则把这两个数字相乘以得到新的简化式
          (cond ((number? (multiplier m1))
                 (make-product (* (multiplier m1) m2) (multiplicand m1)))
                ((number? (multiplicand m1))
