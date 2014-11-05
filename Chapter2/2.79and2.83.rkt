@@ -1,4 +1,5 @@
 #lang racket
+
 (require racket/mpair)
 
 (define assoc massoc)  ;Racke 中，可修改的列表是 mlist，而且相应的一些函数以 m 开头，比如 mcar ,mcdr, mcons, set-mcdr! 
@@ -184,7 +185,8 @@
   (put 'raise '(real)
        (lambda (x) (make-complex-from-real-imag x 0)))
   (put 'make 'real
-       (lambda (x) (tag x))))
+       (lambda (x) (tag x)))
+  'done)
 
 (define (make-real x)
   ((get 'make 'real) x))
@@ -286,6 +288,8 @@
 (define (make-complex-from-mag-ang r a)
   ((get 'make-from-mag-ang 'complex) r a))
 
+; To provide all functions to 2.87
+(provide (all-defined-out))
 
 ;;; Some basic testing
 
@@ -302,7 +306,6 @@
 (install-rational-package)
 (display (equ? (make-rational 1 2) (make-rational 2 4)))(newline)
 (display (equ? (make-rational 1 2) (make-rational 2 2)))(newline)
-
 (install-real-package)
 
 (display (raise (make-scheme-number 2)))(newline)
