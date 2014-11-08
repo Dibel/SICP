@@ -23,3 +23,4 @@ Temporary Items
 # DrRacket backups
 *.rkt~
 *.bak
+compiled/
