@@ -70,11 +70,19 @@
 
 (define (apply-generic op . args)
   (let ((type-tags (map type-tag args)))
-    (let ((proc (get op type-tags)))
-      (if proc
-          (apply proc (map contents args))
-          (error "No method for the given types -- APPLY-GENERIC"
+    (if (or (eq? op 'raise-poly) (null? (filter (lambda (x) (eq? x 'polynomial)) type-tags)))
+        (let ((proc (get op type-tags)))
+          (if proc
+              (apply proc (map contents args))
+              (error "No method for the given types -- APPLY-GENERIC"
+                 (mlist op type-tags))))
+        (let ((var (cadr (car (filter (lambda (x) (eq? (type-tag x) 'polynomial)) args)))))
+          (let ((proc (get op (map type-tag (map (raise-poly var) args)))))
+           (if proc
+              (apply proc (map contents (map (raise-poly var) args)))
+              (error "No method for the given type -- APPLY-GENERIC"
                  (mlist op type-tags))))))
+     ))
 
 
 ;;; Some generic arithmetic procedures
@@ -83,7 +91,6 @@
 (define (sub x y) (apply-generic 'sub x y))
 (define (mul x y) (apply-generic 'mul x y))
 (define (div x y) (apply-generic 'div x y))
-
 
 ;;; The rational number package
 
@@ -149,6 +156,8 @@
 
 (define (raise x) (apply-generic 'raise x))
 
+(define (negate x) (apply-generic 'negate x))
+
 ;; 自然数
 
 
@@ -162,6 +171,11 @@
        (lambda (x) (= x 0)))
   (put 'raise '(scheme-number)
        (lambda (x) (make-rational x 1)))
+  (put 'negate '(scheme-number)             ; 取负
+       (lambda (x) (tag (- 0 x))))
+  (put 'raise-poly '(scheme-number)
+       (lambda (x) (lambda (var) (make-polynomial var (list (list 0 (make-scheme-number x)))))))
+  
   (put 'add '(scheme-number scheme-number)
        (lambda (x y) (tag (+ x y))))
   (put 'sub '(scheme-number scheme-number)
@@ -288,7 +302,12 @@
 (define (make-complex-from-mag-ang r a)
   ((get 'make-from-mag-ang 'complex) r a))
 
-; To provide all functions to 2.87
+; To provide all functions to 2.87and2.88and2.92
+(define (make-polynomial var terms)
+  ((get 'make 'polynomial) var terms))
+
+(define (raise-poly var) (lambda (x) ((apply-generic 'raise-poly x) var)))
+
 (provide (all-defined-out))
 
 ;;; Some basic testing
@@ -311,3 +330,4 @@
 (display (raise (make-scheme-number 2)))(newline)
 (display (raise (make-rational 1 2)))(newline)
 (display (raise (make-real 2.1)))(newline)
+(display "======2.83 TEST DONE======")(newline)
